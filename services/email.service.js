@@ -1,7 +1,4 @@
 const nodemailer = require('nodemailer');
-const archiver = require('archiver');
-const fs = require('fs');
-const path = require('path');
 require('dotenv').config();
 
 class EmailService {
@@ -21,41 +18,6 @@ class EmailService {
         });
     }
 
-    async createZipFile(files, orderId) {
-        return new Promise((resolve, reject) => {
-            const outputDir = path.join(__dirname, '../output/temp');
-            if (!fs.existsSync(outputDir)) {
-                fs.mkdirSync(outputDir, { recursive: true });
-            }
-
-            const outputPath = path.join(outputDir, `print_sheets_${orderId}.zip`);
-            const output = fs.createWriteStream(outputPath);
-            const archive = archiver('zip', {
-                zlib: { level: 9 } // Maximum compression
-            });
-
-            output.on('close', () => {
-                console.log(`Zip file created: ${archive.pointer()} bytes`);
-                resolve(outputPath);
-            });
-
-            archive.on('error', (err) => {
-                reject(err);
-            });
-
-            archive.pipe(output);
-
-            // Add print sheet files to the zip
-            files.printSheets.forEach((filePath, index) => {
-                archive.file(filePath, { 
-                    name: `print_sheet_${index + 1}.json` 
-                });
-            });
-
-            archive.finalize();
-        });
-    }
-
     async sendProcessingNotification(orderDetails, driveLink) {
         console.log('Preparing to send email notification...');
         
@@ -70,7 +32,7 @@ Order ID: ${orderDetails.orderId}
 Tracking Number: ${orderDetails.trackingNumber}
 Total Cards Processed: ${orderDetails.totalCardsProcessed}
 
-Files have been uploaded to Google Drive:
+Files available at:
 ${driveLink}
 
 Processing Time: ${new Date().toISOString()}
