@@ -1,5 +1,6 @@
 const controller = require('../controllers/order.controller');
 const cardProcessor = require('../services/cardProcessor.service');
+const shippingService = require('../services/shipping.service');
 const { Order } = require('../models/order.model');
 
 module.exports = function(app) {
@@ -41,7 +42,6 @@ module.exports = function(app) {
 
     app.get("/api/process-order/:orderId", async (req, res) => {
         try {
-            // Fetch order with populated items
             const order = await Order.findById(req.params.orderId)
                 .populate({
                     path: 'items',
@@ -57,20 +57,20 @@ module.exports = function(app) {
                 });
             }
 
-            if (!order.items || order.items.length === 0) {
-                return res.status(400).json({ 
-                    message: "Order has no items" 
-                });
-            }
-
             console.log(`Processing order ${order._id} with ${order.items.length} items`);
             
-            const results = await cardProcessor.processOrderWithPrintSheets(order.items);
+            // Process cards and generate print sheets
+            const cardResults = await cardProcessor.processOrderWithPrintSheets(order.items);
             
+            // Generate shipping label
+            console.log('Generating shipping label...');
+            const shippingResult = await shippingService.generateShippingLabel(order);
+
             res.json({
                 message: "Order processing completed",
                 orderId: order._id,
-                results
+                cardResults,
+                shipping: shippingResult
             });
         } catch (error) {
             console.error('Order processing error:', error);
