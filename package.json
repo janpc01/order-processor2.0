@@ -16,6 +16,7 @@
     "express": "^4.21.1",
     "fs": "^0.0.1-security",
     "mongoose": "^8.8.2",
+    "nodemailer": "^6.9.16",
     "path": "^0.12.7"
   }
 }

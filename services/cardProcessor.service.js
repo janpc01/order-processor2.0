@@ -196,6 +196,21 @@ class CardProcessor {
             throw new Error(`Order processing failed: ${error.message}`);
         }
     }
+
+    async incrementPrintCount(cardId, quantity) {
+        try {
+            const card = await Card.findByIdAndUpdate(
+                cardId,
+                { $inc: { printCount: quantity } },
+                { new: true }
+            );
+            console.log(`Print count updated for card ${cardId}: ${card.printCount}`);
+            return card.printCount;
+        } catch (error) {
+            console.error(`Error updating print count for card ${cardId}:`, error);
+            throw error;
+        }
+    }
 }
 
 module.exports = new CardProcessor();

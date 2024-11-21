@@ -2,6 +2,8 @@ const controller = require('../controllers/order.controller');
 const cardProcessor = require('../services/cardProcessor.service');
 const shippingService = require('../services/shipping.service');
 const { Order } = require('../models/order.model');
+const ProcessedOrder = require('../models/processed-order.model');
+const emailService = require('../services/email.service');
 
 module.exports = function(app) {
     app.get("/api/fetch-order/:orderId", controller.fetchOrderDetails);
@@ -52,25 +54,57 @@ module.exports = function(app) {
                 });
 
             if (!order) {
-                return res.status(404).json({ 
-                    message: "Order not found" 
-                });
+                return res.status(404).json({ message: "Order not found" });
             }
 
-            console.log(`Processing order ${order._id} with ${order.items.length} items`);
-            
             // Process cards and generate print sheets
             const cardResults = await cardProcessor.processOrderWithPrintSheets(order.items);
             
             // Generate shipping label
-            console.log('Generating shipping label...');
             const shippingResult = await shippingService.generateShippingLabel(order);
+
+            // Update print counts for all cards
+            const printCountUpdates = await Promise.all(
+                order.items.map(item => 
+                    cardProcessor.incrementPrintCount(item.card._id, item.quantity)
+                )
+            );
+
+            // Store processed order details
+            const processedOrder = new ProcessedOrder({
+                originalOrderId: order._id,
+                printSheetPaths: cardResults.success.map(r => r.printSheet.filepath),
+                shippingLabelPath: shippingResult.filepath,
+                trackingNumber: shippingResult.trackingNumber,
+                totalCardsProcessed: cardResults.totalProcessed,
+                cardsPrintCount: order.items.map(item => ({
+                    cardId: item.card._id,
+                    quantity: item.quantity
+                }))
+            });
+
+            await processedOrder.save();
+
+            // Send email notification
+            await emailService.sendProcessingNotification(
+                {
+                    orderId: order._id,
+                    trackingNumber: shippingResult.trackingNumber,
+                    totalCardsProcessed: cardResults.totalProcessed
+                },
+                {
+                    printSheets: cardResults.success.map(r => r.printSheet.filepath),
+                    shippingLabel: shippingResult.filepath
+                }
+            );
 
             res.json({
                 message: "Order processing completed",
                 orderId: order._id,
+                processedOrderId: processedOrder._id,
                 cardResults,
-                shipping: shippingResult
+                shipping: shippingResult,
+                printCountUpdates
             });
         } catch (error) {
             console.error('Order processing error:', error);
