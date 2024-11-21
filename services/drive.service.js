@@ -3,12 +3,26 @@ const path = require('path');
 const fs = require('fs');
 const archiver = require('archiver');
 const { authenticate } = require('@google-cloud/local-auth');
+require('dotenv').config();
 
 class DriveService {
     constructor() {
         this.drive = null;
         this.SCOPES = ['https://www.googleapis.com/auth/drive.file'];
-        this.FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID; // The ID of your designated folder
+        this.FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+        // Validate environment variables
+        const requiredEnvVars = [
+            'GOOGLE_CLIENT_ID',
+            'GOOGLE_CLIENT_SECRET',
+            'GOOGLE_PROJECT_ID',
+            'GOOGLE_DRIVE_FOLDER_ID'
+        ];
+
+        const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+        if (missingVars.length > 0) {
+            throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+        }
     }
 
     async init() {
