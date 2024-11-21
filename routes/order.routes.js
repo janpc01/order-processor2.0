@@ -4,6 +4,7 @@ const shippingService = require('../services/shipping.service');
 const { Order } = require('../models/order.model');
 const ProcessedOrder = require('../models/processed-order.model');
 const emailService = require('../services/email.service');
+const driveService = require('../services/drive.service');
 
 module.exports = function(app) {
     app.get("/api/fetch-order/:orderId", controller.fetchOrderDetails);
@@ -57,24 +58,24 @@ module.exports = function(app) {
                 return res.status(404).json({ message: "Order not found" });
             }
 
-            // Process cards and generate print sheets
+            // Process cards and generate files
             const cardResults = await cardProcessor.processOrderWithPrintSheets(order.items);
-            
-            // Generate shipping label
             const shippingResult = await shippingService.generateShippingLabel(order);
 
-            // Update print counts for all cards
-            const printCountUpdates = await Promise.all(
-                order.items.map(item => 
-                    cardProcessor.incrementPrintCount(item.card._id, item.quantity)
-                )
-            );
+            // Create zip file
+            const zipPath = await driveService.createOrderZip(order._id, {
+                printSheets: cardResults.success.map(r => r.printSheet.filepath),
+                shippingLabel: shippingResult.filepath
+            });
+
+            // Upload to Google Drive
+            const driveUpload = await driveService.uploadToGoogleDrive(zipPath, order._id);
 
             // Store processed order details
             const processedOrder = new ProcessedOrder({
                 originalOrderId: order._id,
-                printSheetPaths: cardResults.success.map(r => r.printSheet.filepath),
-                shippingLabelPath: shippingResult.filepath,
+                driveFileId: driveUpload.fileId,
+                driveFileLink: driveUpload.webViewLink,
                 trackingNumber: shippingResult.trackingNumber,
                 totalCardsProcessed: cardResults.totalProcessed,
                 cardsPrintCount: order.items.map(item => ({
@@ -85,26 +86,21 @@ module.exports = function(app) {
 
             await processedOrder.save();
 
-            // Send email notification
+            // Send email notification with Google Drive link
             await emailService.sendProcessingNotification(
                 {
                     orderId: order._id,
                     trackingNumber: shippingResult.trackingNumber,
                     totalCardsProcessed: cardResults.totalProcessed
                 },
-                {
-                    printSheets: cardResults.success.map(r => r.printSheet.filepath),
-                    shippingLabel: shippingResult.filepath
-                }
+                driveUpload.webViewLink
             );
 
             res.json({
                 message: "Order processing completed",
                 orderId: order._id,
                 processedOrderId: processedOrder._id,
-                cardResults,
-                shipping: shippingResult,
-                printCountUpdates
+                driveLink: driveUpload.webViewLink
             });
         } catch (error) {
             console.error('Order processing error:', error);
