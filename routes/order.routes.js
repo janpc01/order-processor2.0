@@ -21,4 +21,20 @@ module.exports = function(app) {
             });
         }
     });
+
+    // Test endpoint for processing a card with random cards
+    app.get("/api/process-card-with-randoms/:cardId", async (req, res) => {
+        try {
+            const result = await cardProcessor.processCardWithRandoms(req.params.cardId);
+            res.json({
+                message: "Card processed with random cards successfully",
+                result
+            });
+        } catch (error) {
+            res.status(500).json({
+                message: "Error processing card with randoms",
+                error: error.message
+            });
+        }
+    });
 };
