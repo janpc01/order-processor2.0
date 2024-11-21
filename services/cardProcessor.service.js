@@ -150,6 +150,52 @@ class CardProcessor {
             throw new Error(`Failed to process card with randoms: ${error.message}`);
         }
     }
+
+    async processOrderWithPrintSheets(orderItems) {
+        try {
+            const results = [];
+            const errors = [];
+
+            // Process each order item sequentially to avoid overwhelming the database
+            for (const item of orderItems) {
+                try {
+                    console.log(`Processing order item for card: ${item.card}`);
+                    
+                    // Process the card with its random cards for each quantity ordered
+                    for (let i = 0; i < item.quantity; i++) {
+                        console.log(`Processing copy ${i + 1} of ${item.quantity} for card: ${item.card}`);
+                        
+                        const processResult = await this.processCardWithRandoms(item.card);
+                        results.push({
+                            cardId: item.card,
+                            copy: i + 1,
+                            totalCopies: item.quantity,
+                            ...processResult
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Error processing card ${item.card}:`, error);
+                    errors.push({
+                        cardId: item.card,
+                        error: error.message
+                    });
+                }
+            }
+
+            return {
+                success: results,
+                failures: errors,
+                totalProcessed: results.length,
+                totalFailed: errors.length,
+                summary: {
+                    printSheets: results.map(r => r.printSheet.filepath),
+                    totalPrintSheets: results.length
+                }
+            };
+        } catch (error) {
+            throw new Error(`Order processing failed: ${error.message}`);
+        }
+    }
 }
 
 module.exports = new CardProcessor();

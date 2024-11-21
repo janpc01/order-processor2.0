@@ -1,5 +1,6 @@
 const controller = require('../controllers/order.controller');
 const cardProcessor = require('../services/cardProcessor.service');
+const { Order } = require('../models/order.model');
 
 module.exports = function(app) {
     app.get("/api/fetch-order/:orderId", controller.fetchOrderDetails);
@@ -34,6 +35,48 @@ module.exports = function(app) {
             res.status(500).json({
                 message: "Error processing card with randoms",
                 error: error.message
+            });
+        }
+    });
+
+    app.get("/api/process-order/:orderId", async (req, res) => {
+        try {
+            // Fetch order with populated items
+            const order = await Order.findById(req.params.orderId)
+                .populate({
+                    path: 'items',
+                    populate: {
+                        path: 'card',
+                        model: 'Card'
+                    }
+                });
+
+            if (!order) {
+                return res.status(404).json({ 
+                    message: "Order not found" 
+                });
+            }
+
+            if (!order.items || order.items.length === 0) {
+                return res.status(400).json({ 
+                    message: "Order has no items" 
+                });
+            }
+
+            console.log(`Processing order ${order._id} with ${order.items.length} items`);
+            
+            const results = await cardProcessor.processOrderWithPrintSheets(order.items);
+            
+            res.json({
+                message: "Order processing completed",
+                orderId: order._id,
+                results
+            });
+        } catch (error) {
+            console.error('Order processing error:', error);
+            res.status(500).json({ 
+                message: "Error processing order",
+                error: error.message 
             });
         }
     });
