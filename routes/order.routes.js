@@ -110,4 +110,73 @@ module.exports = function(app) {
             });
         }
     });
+
+    app.post("/api/process-order", async (req, res) => {
+        try {
+            const { orderId } = req.body;
+            if (!orderId) {
+                return res.status(400).json({ message: "Order ID is required" });
+            }
+
+            const order = await Order.findById(orderId)
+                .populate({
+                    path: 'items',
+                    populate: {
+                        path: 'card',
+                        model: 'Card'
+                    }
+                });
+
+            // Process cards and generate files
+            const cardResults = await cardProcessor.processOrderWithPrintSheets(order.items);
+            const shippingResult = await shippingService.generateShippingLabel(order);
+
+            // Create zip file
+            const zipPath = await driveService.createOrderZip(order._id, {
+                printSheets: cardResults.success.map(r => r.printSheet.filepath),
+                shippingLabel: shippingResult.filepath
+            });
+
+            // Upload to Google Drive
+            const driveUpload = await driveService.uploadToGoogleDrive(zipPath, order._id);
+
+            // Store processed order details
+            const processedOrder = new ProcessedOrder({
+                originalOrderId: order._id,
+                driveFileId: driveUpload.fileId,
+                driveFileLink: driveUpload.webViewLink,
+                trackingNumber: shippingResult.trackingNumber,
+                totalCardsProcessed: cardResults.totalProcessed,
+                cardsPrintCount: order.items.map(item => ({
+                    cardId: item.card._id,
+                    quantity: item.quantity
+                }))
+            });
+
+            await processedOrder.save();
+
+            // Send email notification with Google Drive link
+            await emailService.sendProcessingNotification(
+                {
+                    orderId: order._id,
+                    trackingNumber: shippingResult.trackingNumber,
+                    totalCardsProcessed: cardResults.totalProcessed
+                },
+                driveUpload.webViewLink
+            );
+
+            res.json({
+                message: "Order processing completed",
+                orderId: order._id,
+                processedOrderId: processedOrder._id,
+                driveLink: driveUpload.webViewLink
+            });
+        } catch (error) {
+            console.error('Order processing error:', error);
+            res.status(500).json({ 
+                message: "Error processing order",
+                error: error.message 
+            });
+        }
+    });
 };

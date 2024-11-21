@@ -66,6 +66,17 @@ class DriveService {
         });
     }
 
+    async cleanupOutputDirectory() {
+        try {
+            const outputDir = path.join(__dirname, '../output');
+            await fs.rm(outputDir, { recursive: true, force: true });
+            console.log('Output directory cleaned successfully');
+        } catch (error) {
+            console.error('Error cleaning output directory:', error);
+            // Don't throw error as this is a cleanup operation
+        }
+    }
+
     async uploadToGoogleDrive(zipPath, orderId) {
         await this.init();
 
@@ -86,10 +97,23 @@ class DriveService {
                 fields: 'id, webViewLink'
             });
 
-            // Clean up temp zip file
-            fs.unlink(zipPath, err => {
-                if (err) console.error('Error cleaning up zip file:', err);
-            });
+            // Wait for file operations to complete
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            try {
+                // Delete the zip file
+                fs.unlinkSync(zipPath);
+                
+                // Delete the output directory
+                const outputDir = path.join(__dirname, '../output');
+                if (fs.existsSync(outputDir)) {
+                    fs.rmdirSync(outputDir, { recursive: true });
+                    console.log('Output directory removed successfully');
+                }
+            } catch (cleanupError) {
+                console.error('Error during cleanup:', cleanupError);
+                // Continue even if cleanup fails
+            }
 
             return {
                 fileId: file.data.id,
