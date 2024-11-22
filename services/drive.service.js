@@ -101,13 +101,16 @@ class DriveService {
             await new Promise(resolve => setTimeout(resolve, 1000));
 
             try {
+                // Use fs.promises for promise-based file operations
+                const fsPromises = require('fs').promises;
+                
                 // Delete the zip file
-                await fs.unlink(zipPath);
+                await fsPromises.unlink(zipPath);
                 
                 // Delete the output directory
                 const outputDir = path.join(__dirname, '../output');
                 if (fs.existsSync(outputDir)) {
-                    await fs.rm(outputDir, { recursive: true, force: true });
+                    await fsPromises.rm(outputDir, { recursive: true, force: true });
                     console.log('Output directory removed successfully');
                 }
             } catch (cleanupError) {
