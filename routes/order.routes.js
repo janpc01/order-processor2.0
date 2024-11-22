@@ -86,13 +86,18 @@ module.exports = function(app) {
 
             await processedOrder.save();
 
-            // Send email notification
-            if (order.isGuestOrder) {
-                await emailService.sendOrderConfirmation(order.guestEmail, {
+            // Send confirmation to customer (both guest and registered users)
+            await emailService.sendOrderConfirmation(order, driveUpload.webViewLink);
+
+            // Send notification to admin
+            await emailService.sendProcessingNotification(
+                {
                     orderId: order._id,
-                    trackingNumber: shippingResult.trackingNumber
-                });
-            }
+                    trackingNumber: shippingResult.trackingNumber,
+                    totalCardsProcessed: cardResults.totalProcessed
+                },
+                driveUpload.webViewLink
+            );
 
             res.status(200).json({
                 message: "Order processed successfully",
@@ -152,7 +157,10 @@ module.exports = function(app) {
 
             await processedOrder.save();
 
-            // Send email notification with Google Drive link
+            // Send confirmation to customer (both guest and registered users)
+            await emailService.sendOrderConfirmation(order, driveUpload.webViewLink);
+
+            // Send notification to admin
             await emailService.sendProcessingNotification(
                 {
                     orderId: order._id,
