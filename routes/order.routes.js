@@ -58,7 +58,7 @@ module.exports = function(app) {
                 return res.status(404).json({ message: "Order not found" });
             }
 
-            // Process cards and generate files
+            // Process cards and generate files regardless of order type
             const cardResults = await cardProcessor.processOrderWithPrintSheets(order.items);
             const shippingResult = await shippingService.generateShippingLabel(order);
 
@@ -86,21 +86,18 @@ module.exports = function(app) {
 
             await processedOrder.save();
 
-            // Send email notification with Google Drive link
-            await emailService.sendProcessingNotification(
-                {
+            // Send email notification
+            if (order.isGuestOrder) {
+                await emailService.sendOrderConfirmation(order.guestEmail, {
                     orderId: order._id,
-                    trackingNumber: shippingResult.trackingNumber,
-                    totalCardsProcessed: cardResults.totalProcessed
-                },
-                driveUpload.webViewLink
-            );
+                    trackingNumber: shippingResult.trackingNumber
+                });
+            }
 
-            res.json({
-                message: "Order processing completed",
-                orderId: order._id,
-                processedOrderId: processedOrder._id,
-                driveLink: driveUpload.webViewLink
+            res.status(200).json({
+                message: "Order processed successfully",
+                processedOrder,
+                result: cardResults
             });
         } catch (error) {
             console.error('Order processing error:', error);

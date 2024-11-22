@@ -107,48 +107,48 @@ class CardProcessor {
     }
 
     async processCardWithRandoms(cardId) {
-        try {
-            console.log('Starting processCardWithRandoms for cardId:', cardId);
-            
-            const mainCard = await this.fetchCardInfo(cardId);
-            console.log('Main card fetched');
-            
-            const randomCards = await this.fetchRandomCards(cardId);
-            console.log('Random cards fetched:', randomCards.length);
+        console.log('Processing card with randoms:', cardId);
+        
+        // Fetch main card
+        const mainCard = await this.fetchCardInfo(cardId);
+        console.log('Main card fetched:', mainCard._id);
+        
+        // Fetch random cards
+        const randomCards = await this.fetchRandomCards(cardId);
+        console.log('Random cards fetched:', randomCards.length);
 
-            // Generate individual card files
-            const mainCardFile = await this.generateCardFile(mainCard);
-            console.log('Main card file generated:', mainCardFile);
-            
-            const randomCardFiles = await Promise.all(
-                randomCards.map(card => this.generateCardFile(card))
-            );
-            console.log('Random card files generated');
+        // Generate individual card files
+        const mainCardFile = await this.generateCardFile(mainCard);
+        console.log('Main card file generated:', mainCardFile);
+        
+        const randomCardFiles = await Promise.all(
+            randomCards.map(card => this.generateCardFile(card))
+        );
+        console.log('Random card files generated');
 
-            // Generate print sheet
-            console.log('Attempting to generate print sheet...');
-            const printSheetFile = await this.generatePrintSheet(mainCard, randomCards);
-            console.log('Print sheet generated:', printSheetFile);
+        // Generate print sheet
+        console.log('Attempting to generate print sheet...');
+        const printSheetFile = await this.generatePrintSheet(mainCard, randomCards);
+        console.log('Print sheet generated:', printSheetFile);
 
-            return {
-                mainCard: {
-                    card: mainCard,
-                    filepath: mainCardFile
-                },
-                randomCards: randomCards.map((card, index) => ({
-                    card: card,
-                    filepath: randomCardFiles[index]
-                })),
-                printSheet: {
-                    filepath: printSheetFile,
-                    totalCards: 1 + randomCards.length,
-                    maxPossibleCards: 20
-                }
-            };
-        } catch (error) {
-            console.error('Error in processCardWithRandoms:', error);
-            throw new Error(`Failed to process card with randoms: ${error.message}`);
-        }
+        // Increment print count for the main card
+        await this.incrementPrintCount(cardId, 1);
+
+        return {
+            mainCard: {
+                card: mainCard,
+                filepath: mainCardFile
+            },
+            randomCards: randomCards.map((card, index) => ({
+                card: card,
+                filepath: randomCardFiles[index]
+            })),
+            printSheet: {
+                filepath: printSheetFile,
+                totalCards: 1 + randomCards.length,
+                maxPossibleCards: 20
+            }
+        };
     }
 
     async processOrderWithPrintSheets(orderItems) {

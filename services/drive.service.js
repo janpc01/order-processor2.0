@@ -102,12 +102,12 @@ class DriveService {
 
             try {
                 // Delete the zip file
-                fs.unlinkSync(zipPath);
+                await fs.unlink(zipPath);
                 
                 // Delete the output directory
                 const outputDir = path.join(__dirname, '../output');
                 if (fs.existsSync(outputDir)) {
-                    fs.rmdirSync(outputDir, { recursive: true });
+                    await fs.rm(outputDir, { recursive: true, force: true });
                     console.log('Output directory removed successfully');
                 }
             } catch (cleanupError) {

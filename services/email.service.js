@@ -5,8 +5,11 @@ class EmailService {
     constructor() {
         console.log('Initializing email service...');
         
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD || !process.env.ADMIN_EMAIL) {
-            console.error('Missing email configuration');
+        const requiredVars = ['EMAIL_USER', 'EMAIL_PASSWORD', 'ADMIN_EMAIL'];
+        const missingVars = requiredVars.filter(varName => !process.env[varName]);
+        
+        if (missingVars.length > 0) {
+            throw new Error(`Missing required email configuration: ${missingVars.join(', ')}`);
         }
 
         this.transporter = nodemailer.createTransport({
