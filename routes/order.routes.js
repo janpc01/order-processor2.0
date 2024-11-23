@@ -43,76 +43,6 @@ module.exports = function(app) {
         }
     });
 
-    app.get("/api/process-order/:orderId", async (req, res) => {
-        try {
-            const order = await Order.findById(req.params.orderId)
-                .populate({
-                    path: 'items',
-                    populate: {
-                        path: 'card',
-                        model: 'Card'
-                    }
-                });
-
-            if (!order) {
-                return res.status(404).json({ message: "Order not found" });
-            }
-
-            // Process cards and generate files regardless of order type
-            const cardResults = await cardProcessor.processOrderWithPrintSheets(order.items);
-            const shippingResult = await shippingService.generateShippingLabel(order);
-
-            // Create zip file
-            const zipPath = await driveService.createOrderZip(order._id, {
-                printSheets: cardResults.success.map(r => r.printSheet.filepath),
-                shippingLabel: shippingResult.filepath
-            });
-
-            // Upload to Google Drive
-            const driveUpload = await driveService.uploadToGoogleDrive(zipPath, order._id);
-
-            // Store processed order details
-            const processedOrder = new ProcessedOrder({
-                originalOrderId: order._id,
-                driveFileId: driveUpload.fileId,
-                driveFileLink: driveUpload.webViewLink,
-                trackingNumber: shippingResult.trackingNumber,
-                totalCardsProcessed: cardResults.totalProcessed,
-                cardsPrintCount: order.items.map(item => ({
-                    cardId: item.card._id,
-                    quantity: item.quantity
-                }))
-            });
-
-            await processedOrder.save();
-
-            // Send confirmation to customer (both guest and registered users)
-            await emailService.sendOrderConfirmation(order, driveUpload.webViewLink);
-
-            // Send notification to admin
-            await emailService.sendProcessingNotification(
-                {
-                    orderId: order._id,
-                    trackingNumber: shippingResult.trackingNumber,
-                    totalCardsProcessed: cardResults.totalProcessed
-                },
-                driveUpload.webViewLink
-            );
-
-            res.status(200).json({
-                message: "Order processed successfully",
-                processedOrder,
-                result: cardResults
-            });
-        } catch (error) {
-            console.error('Order processing error:', error);
-            res.status(500).json({ 
-                message: "Error processing order",
-                error: error.message 
-            });
-        }
-    });
-
     app.post("/api/process-order", async (req, res) => {
         try {
             const { orderId } = req.body;
@@ -157,18 +87,22 @@ module.exports = function(app) {
 
             await processedOrder.save();
 
-            // Send confirmation to customer (both guest and registered users)
-            await emailService.sendOrderConfirmation(order, driveUpload.webViewLink);
-
             // Send notification to admin
             await emailService.sendProcessingNotification(
                 {
                     orderId: order._id,
                     trackingNumber: shippingResult.trackingNumber,
-                    totalCardsProcessed: cardResults.totalProcessed
+                    totalCardsProcessed: cardResults.totalProcessed,
+                    email: order.shippingAddress.email
                 },
                 driveUpload.webViewLink
             );
+
+            console.log('Order data:', {
+                id: order._id,
+                shippingAddress: order.shippingAddress,
+                email: order.shippingAddress?.email
+            });
 
             res.json({
                 message: "Order processing completed",

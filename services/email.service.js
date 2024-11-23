@@ -29,16 +29,15 @@ class EmailService {
             to: process.env.ADMIN_EMAIL,
             subject: `Order ${orderDetails.orderId} Processed`,
             text: `
-Order Processing Complete
+                Order Processing Complete
 
-Order ID: ${orderDetails.orderId}
-Tracking Number: ${orderDetails.trackingNumber}
-Total Cards Processed: ${orderDetails.totalCardsProcessed}
+                Order ID: ${orderDetails.orderId}
+                Tracking Number: ${orderDetails.trackingNumber}
+                Total Cards Processed: ${orderDetails.totalCardsProcessed}
 
-Files available at:
-${driveLink}
+                Files available at: ${driveLink}
 
-Processing Time: ${new Date().toISOString()}
+                Processing Time: ${new Date().toISOString()}
             `
         };
 
