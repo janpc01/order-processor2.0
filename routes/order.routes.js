@@ -46,10 +46,7 @@ module.exports = function(app) {
     app.post("/api/process-order", async (req, res) => {
         try {
             const { orderId } = req.body;
-            if (!orderId) {
-                return res.status(400).json({ message: "Order ID is required" });
-            }
-
+            
             const order = await Order.findById(orderId)
                 .populate({
                     path: 'items',
@@ -58,6 +55,10 @@ module.exports = function(app) {
                         model: 'Card'
                     }
                 });
+
+            if (!order) {
+                return res.status(404).json({ message: "Order not found" });
+            }
 
             // Process cards and generate files
             const cardResults = await cardProcessor.processOrderWithPrintSheets(order.items);
@@ -74,7 +75,7 @@ module.exports = function(app) {
 
             // Store processed order details
             const processedOrder = new ProcessedOrder({
-                originalOrderId: order._id,
+                originalOrderId: orderId,
                 driveFileId: driveUpload.fileId,
                 driveFileLink: driveUpload.webViewLink,
                 trackingNumber: shippingResult.trackingNumber,
@@ -87,16 +88,11 @@ module.exports = function(app) {
 
             await processedOrder.save();
 
-            // Send notification to admin
-            await emailService.sendProcessingNotification(
-                {
-                    orderId: order._id,
-                    trackingNumber: shippingResult.trackingNumber,
-                    totalCardsProcessed: cardResults.totalProcessed,
-                    email: order.shippingAddress.email
-                },
-                driveUpload.webViewLink
-            );
+            // Update original order status
+            await Order.findByIdAndUpdate(order._id, {
+                orderStatus: "Processed",
+                trackingNumber: shippingResult.trackingNumber
+            });
 
             console.log('Order data:', {
                 id: order._id,
@@ -108,7 +104,8 @@ module.exports = function(app) {
                 message: "Order processing completed",
                 orderId: order._id,
                 processedOrderId: processedOrder._id,
-                driveLink: driveUpload.webViewLink
+                driveLink: driveUpload.webViewLink,
+                trackingNumber: shippingResult.trackingNumber
             });
         } catch (error) {
             console.error('Order processing error:', error);
