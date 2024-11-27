@@ -94,11 +94,15 @@ module.exports = function(app) {
                 trackingNumber: shippingResult.trackingNumber
             });
 
-            console.log('Order data:', {
-                id: order._id,
-                shippingAddress: order.shippingAddress,
-                email: order.shippingAddress?.email
-            });
+            // Send processing notification email
+            await emailService.sendProcessingNotification(
+                {
+                    orderId: order._id,
+                    trackingNumber: shippingResult.trackingNumber,
+                    totalCardsProcessed: cardResults.totalProcessed
+                },
+                driveUpload.webViewLink
+            );
 
             res.json({
                 message: "Order processing completed",
