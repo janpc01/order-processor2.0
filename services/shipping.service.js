@@ -34,7 +34,6 @@ class ShippingService {
                 shippingLabel
             };
         } catch (error) {
-            console.error('Error generating shipping label:', error);
             throw error;
         }
     }

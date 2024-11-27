@@ -21,7 +21,6 @@ exports.fetchOrderDetails = async (req, res) => {
 
         res.status(200).json(order);
     } catch (err) {
-        console.error('Error fetching order:', err);
         res.status(500).json({ message: "Error fetching order details", error: err.message });
     }
 };

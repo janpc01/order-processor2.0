@@ -70,16 +70,13 @@ class DriveService {
         try {
             const outputDir = path.join(__dirname, '../output');
             await fs.rm(outputDir, { recursive: true, force: true });
-            console.log('Output directory cleaned successfully');
         } catch (error) {
-            console.error('Error cleaning output directory:', error);
             // Don't throw error as this is a cleanup operation
         }
     }
 
     async uploadToGoogleDrive(zipPath, orderId) {
         await this.init();
-
         try {
             const fileMetadata = {
                 name: `${orderId}.zip`,
@@ -97,25 +94,12 @@ class DriveService {
                 fields: 'id, webViewLink'
             });
 
-            // Wait for file operations to complete
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            try {
-                // Use fs.promises for promise-based file operations
-                const fsPromises = require('fs').promises;
-                
-                // Delete the zip file
-                await fsPromises.unlink(zipPath);
-                
-                // Delete the output directory
-                const outputDir = path.join(__dirname, '../output');
-                if (fs.existsSync(outputDir)) {
-                    await fsPromises.rm(outputDir, { recursive: true, force: true });
-                    console.log('Output directory removed successfully');
-                }
-            } catch (cleanupError) {
-                console.error('Error during cleanup:', cleanupError);
-                // Continue even if cleanup fails
+            // Clean up files
+            const fsPromises = require('fs').promises;
+            await fsPromises.unlink(zipPath);
+            const outputDir = path.join(__dirname, '../output');
+            if (fs.existsSync(outputDir)) {
+                await fsPromises.rm(outputDir, { recursive: true, force: true });
             }
 
             return {
@@ -123,7 +107,6 @@ class DriveService {
                 webViewLink: file.data.webViewLink
             };
         } catch (error) {
-            console.error('Error uploading to Google Drive:', error);
             throw error;
         }
     }

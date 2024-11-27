@@ -3,8 +3,6 @@ require('dotenv').config();
 
 class EmailService {
     constructor() {
-        console.log('Initializing email service...');
-        
         const requiredVars = ['EMAIL_USER', 'EMAIL_PASSWORD', 'ADMIN_EMAIL'];
         const missingVars = requiredVars.filter(varName => !process.env[varName]);
         
@@ -22,8 +20,6 @@ class EmailService {
     }
 
     async sendProcessingNotification(orderDetails, driveLink) {
-        console.log('Preparing to send email notification...');
-        
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: process.env.ADMIN_EMAIL,
@@ -43,9 +39,7 @@ class EmailService {
 
         try {
             await this.transporter.sendMail(mailOptions);
-            console.log('Processing notification email sent successfully');
         } catch (error) {
-            console.error('Error sending email:', error);
             throw error;
         }
     }
