@@ -5,23 +5,57 @@ const cors = require('cors');
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-require('./routes/order.routes')(app);
-
-const PORT = process.env.PORT || 3001;
-
-// MongoDB connection
-mongoose.connect("mongodb://kyoso-db:CpZ0svqG8rrveYGMuJxI8KldLzHg5evj0QGGZARkA6seberWJDztXRnHFaEp8RDx3bvpPOdiXQCmACDbu2QACg%3D%3D@kyoso-db.mongo.cosmos.azure.com:10255/?ssl=true&retrywrites=false&maxIdleTimeMS=120000&appName=@kyoso-db@")
-    .then(() => {
-        console.log("Successfully connected to MongoDB.");
+// MongoDB Connection
+mongoose
+    .connect(process.env.CUSTOMCONNSTR_ORDER_PROCESSOR_DB, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        dbName: "order_processor_db"
     })
-    .catch(err => {
+    .then(() => {
+        console.log("Successfully connected to Azure Cosmos DB for Order Processor.");
+    })
+    .catch((err) => {
         console.error("Connection error", err);
-        process.exit();
+        process.exit(1);
     });
 
+// CORS Configuration
+const allowedOrigins = [
+    "https://kyosocards.com",
+    "https://www.kyosocards.com",
+    "https://mango-plant-0d19e2110.4.azurestaticapps.net",
+    "https://blue-cliff-0a661b310.4.azurestaticapps.net",
+    "https://order-processor-ewexgkcvhnhzbqhc.canadacentral-01.azurewebsites.net",
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+        else callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['Set-Cookie']
+}));
+
+// Middleware
+app.use(express.json());
+
+// Routes
+require('./routes/order.routes')(app);
+
+
+
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: "Something went wrong!", error: err.message });
+});
+
+// Server Port
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Order Processor running on port ${PORT}`);
 });
