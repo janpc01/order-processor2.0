@@ -55,7 +55,7 @@ app.use((err, req, res, next) => {
 });
 
 // Server Port
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Order Processor running on port ${PORT}`);
 });
