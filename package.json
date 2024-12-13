@@ -11,7 +11,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google-cloud/local-auth": "^3.0.1",
     "archiver": "^7.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -20,8 +19,8 @@
     "googleapis": "^144.0.0",
     "mongoose": "^8.8.2",
     "ngx-image-cropper": "^9.0.0",
+    "node-fetch": "^2.6.7",
     "nodemailer": "^6.9.16",
-    "path": "^0.12.7",
-    "node-fetch": "^2.6.7"
+    "path": "^0.12.7"
   }
 }
