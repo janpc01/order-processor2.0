@@ -10,12 +10,12 @@ console.log("Starting Order Processor Server...");
 // --- Environment Variable Check ---
 console.log("Environment Variables:");
 console.log(`PORT: ${process.env.PORT || 8080}`);
-console.log(`CUSTOMCONNSTR_ORDER_PROCESSOR_DB: ${process.env.CUSTOMCONNSTR_ORDER_PROCESSOR_DB ? "Defined" : "NOT DEFINED"}`);
+console.log(`CUSTOMCONNSTR_COSMOSDB_CONNECTION_STRING: ${process.env.CUSTOMCONNSTR_COSMOSDB_CONNECTION_STRING ? "Defined" : "NOT DEFINED"}`);
 
 // --- MongoDB Connection ---
 console.log("Attempting to connect to MongoDB...");
 mongoose
-    .connect(process.env.CUSTOMCONNSTR_ORDER_PROCESSOR_DB, {
+    .connect(process.env.CUSTOMCONNSTR_COSMOSDB_CONNECTION_STRING, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
         dbName: "order_processor_db"
