@@ -27,6 +27,7 @@ class DriveService {
 
     async init() {
         if (!this.drive) {
+            console.log("Using GOOGLE_DRIVE_FOLDER_ID:", `"${process.env.GOOGLE_DRIVE_FOLDER_ID}"`);
             const credentials = {
                 type: "service_account",
                 project_id: process.env.GOOGLE_PROJECT_ID,
