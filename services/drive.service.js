@@ -2,7 +2,6 @@ const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs');
 const archiver = require('archiver');
-const { authenticate } = require('@google-cloud/local-auth');
 require('dotenv').config();
 
 class DriveService {
@@ -15,6 +14,7 @@ class DriveService {
         const requiredEnvVars = [
             'GOOGLE_CLIENT_ID',
             'GOOGLE_CLIENT_SECRET',
+            'GOOGLE_PRIVATE_KEY',
             'GOOGLE_PROJECT_ID',
             'GOOGLE_DRIVE_FOLDER_ID'
         ];
@@ -27,10 +27,19 @@ class DriveService {
 
     async init() {
         if (!this.drive) {
-            const auth = await authenticate({
-                keyfilePath: path.join(__dirname, '../config/credentials.json'),
+            const credentials = {
+                type: "service_account",
+                project_id: process.env.GOOGLE_PROJECT_ID,
+                private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                client_email: process.env.GOOGLE_CLIENT_EMAIL,
+                client_id: process.env.GOOGLE_CLIENT_ID
+            };
+
+            const auth = new google.auth.GoogleAuth({
+                credentials,
                 scopes: this.SCOPES,
             });
+
             this.drive = google.drive({ version: 'v3', auth });
         }
     }
@@ -71,7 +80,7 @@ class DriveService {
             const outputDir = path.join(__dirname, '../output');
             await fs.rm(outputDir, { recursive: true, force: true });
         } catch (error) {
-            // Don't throw error as this is a cleanup operation
+            console.warn('Cleanup failed:', error.message);
         }
     }
 
