@@ -18,7 +18,7 @@ mongoose
     .connect(process.env.CUSTOMCONNSTR_COSMOSDB_CONNECTION_STRING, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
-        dbName: "order_processor_db"
+        dbName: "kyoso_db"
     })
     .then(() => {
         console.log("Successfully connected to Azure Cosmos DB for Order Processor.");
