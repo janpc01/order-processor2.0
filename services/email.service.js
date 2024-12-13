@@ -3,7 +3,7 @@ require('dotenv').config();
 
 class EmailService {
     constructor() {
-        const requiredVars = ['EMAIL_USER', 'EMAIL_PASSWORD', 'ADMIN_EMAIL'];
+        const requiredVars = ['EMAIL_USER', 'EMAIL_PASSWORD'];
         const missingVars = requiredVars.filter(varName => !process.env[varName]);
         
         if (missingVars.length > 0) {
